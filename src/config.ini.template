@@ -54,9 +54,9 @@ location_name = Montreal, Quebec, Canada
 # location and coordinates so the llm know the position
 
 
-[LLM] # Large Language Model configuration (OpenAI, Grok, Tabby, Ooba, or LOCAL)
+[LLM] # Large Language Model configuration (OpenAI, Grok, Tabby, Ooba, Bedrock, or LOCAL)
 llm_backend = openai
-# Backend for LLM: [openai, grok, tabby, ooba] 
+# Backend for LLM: [openai, grok, tabby, ooba, bedrock] 
 base_url = https://api.openai.com
 # URL for the LLM backend API [OpenAI: https://api.openai.com] or [grok: https://api.x.ai]
 openai_model = gpt-4o-mini
@@ -81,7 +81,11 @@ seed = -1
 # Random seed for reproducibility (-1 means no fixed seed)
 systemprompt = You are to responding naturally and helpfully within the scenario. Be informative and conversational while maintaining your personality.
 # Prompt defining the LLM's behavior
-
+bedrock_model = "us.amazon.nova-2-lite-v1:0"
+# model if you are using bedrock
+aws_default_region = "us-east-2"
+# aws region for bedrock
+bedrock_url = "https://bedrock-runtime.{region}.amazonaws.com/model/{model}/converse"
 
 [VISION] # Vision-related configuration (e.g., image recognition)
 enabled = True

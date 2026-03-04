@@ -28,7 +28,7 @@ from modules.module_prompt import build_prompt
 from modules.module_engine  import execute_movement
 
 from modules.module_messageQue import queue_message
-
+from modules.module_bedrock import BedrockService
 CONFIG = load_config()
 CAPABILITIES = get_capabilities()
 character_manager = None
@@ -92,7 +92,11 @@ def get_completion(user_prompt, istext=True):
     url, data = _prepare_request_data(llm_backend, prompt)
 
     try:
-        response = requests.post(url, headers=headers, json=data)
+        if llm_backend == "bedrock":
+            bedrock_client = BedrockService()
+            response = bedrock_client.make_request(payload=data)
+        else:
+            response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()
         bot_reply = _extract_text(response.json(), istext)
 
@@ -154,6 +158,29 @@ def _prepare_request_data(llm_backend, prompt):
         }
         if llm_backend == "ooba":
             data["seed"] = CONFIG['LLM']['seed']
+    elif llm_backend == "LOCAL":
+        url = f"{CONFIG['LLM']['base_url']}/v1/tars/completions"
+        data = {
+            "messages": [
+                {"role": "system", "content": CONFIG['LLM']['systemprompt']},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": CONFIG['LLM']['max_tokens'],
+            "temperature": CONFIG['LLM']['temperature'],
+            "top_p": CONFIG['LLM']['top_p']
+        }
+    elif llm_backend == "bedrock":
+        url = ""
+        data = {
+            "system": [
+                {"text": CONFIG['LLM']['systemprompt']},
+                {"cachePoint": {"type":"default"}}
+            ],
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "inferenceConfig": {"maxTokens": CONFIG['LLM']['max_tokens'], "temperature": CONFIG['LLM']['temperature']}
+        }
     else:
         raise ValueError(f"Unsupported LLM backend: {llm_backend}")
 
@@ -168,6 +195,8 @@ def _extract_text(response_json, istext):
                 if llm_backend in ["openai", "grok", "deepinfra"]
                 else response_json['choices'][0]['text']
             ).strip()
+        elif llm_backend == "bedrock" and 'output' in response_json:
+            return response_json["output"]["message"]["content"][0]["text"]
         else:
             raise KeyError("Invalid response format: 'choices' key not found.")
     except (KeyError, IndexError, TypeError) as error:
@@ -345,10 +374,33 @@ def _summarize_search_results(search_results, user_question):
                 "max_tokens": 250,
                 "temperature": float(CONFIG['LLM'].get('temperature', 0.7))
             }
+        elif llm_backend == "LOCAL":
+            url = f"{CONFIG['LLM']['base_url']}/v1/tars/completions"
+            data = {
+                "messages": [
+                    {"role": "user", "content": summary_prompt}
+                ],
+                "max_tokens": CONFIG['LLM']['max_tokens'],
+                "temperature": float(CONFIG['LLM'].get('temperature', 0.7))
+            }
+        elif llm_backend == "bedrock":
+            data = {
+                "system": [
+                    {"text": CONFIG['LLM']['systemprompt']},
+                    {"cachePoint": {"type":"default"}}
+                ],
+                "messages": [
+                    {"role": "user", "content": summary_prompt}
+                ],
+                "inferenceConfig": {"maxTokens": CONFIG['LLM']['max_tokens'], "temperature": CONFIG['LLM']['temperature']}
+            }
         else:
             return None
-
-        response = requests.post(url, headers=headers, json=data, timeout=20)
+        if llm_backend == "bedrock":
+            bedrock_client = BedrockService()
+            response = bedrock_client.make_request(payload=data)
+        else:
+            response = requests.post(url, headers=headers, json=data, timeout=20)
         response.raise_for_status()
 
         result = response.json()
@@ -480,7 +532,10 @@ def execute_function_call(func_call, bot_response, user_input):
             value = parameters.get("value", 0)
             if trait and isinstance(value, (int, float)):
                 update_character_setting(trait, int(value))
+                existing_reply = bot_response["reply"]
                 bot_response["reply"] = f"Updated {trait} setting to {int(value)}%"
+                if len(existing_reply) > 0:
+                    bot_response += f". {existing_reply}"
                 queue_message(f"Persona adjusted: {trait} = {value}")
             else:
                 bot_response["reply"] = "Could not parse persona adjustment."
@@ -749,7 +804,11 @@ def raw_complete_llm(user_prompt, istext=True):
     url, data = _prepare_request_data(llm_backend, user_prompt)
 
     try:
-        response = requests.post(url, headers=headers, json=data)
+        if llm_backend == "bedrock":
+            bedrock_client = BedrockService()
+            response = bedrock_client.make_request(payload=data)
+        else:
+            response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()
         bot_reply = _extract_text(response.json(), istext)
         return bot_reply

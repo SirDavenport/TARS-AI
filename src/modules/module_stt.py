@@ -324,7 +324,7 @@ class STTManager:
         if WakeWordSystem is None:
             queue_message("WARNING: Atomik wake word not available")
             return
-        detector = WakeWordSystem(self.WAKE_WORD)
+        detector = WakeWordSystem(self.WAKE_WORD, sample_rate=self.SAMPLE_RATE)
         detector.createModel()
 
     def _load_fasterwhisper_model(self):
@@ -998,7 +998,7 @@ class STTManager:
         threshold = 0.2 + curve * (0.7 - 0.2)
         threshold = round(max(0.2, min(threshold, 0.7)), 2)
         #print("Atomik sensitivity:", threshold)
-        detector = WakeWordSystem(self.WAKE_WORD, 16000, threshold)
+        detector = WakeWordSystem(self.WAKE_WORD, self.SAMPLE_RATE, threshold)
         detector.createModel()
         if detector.listenForWakeWord():
             if self.config["STT"].get("use_indicators"):
