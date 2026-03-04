@@ -401,6 +401,9 @@ def load_config():
             "top_p": float(config['LLM']['top_p']),
             "seed": int(config['LLM']['seed']),
             "systemprompt": config['LLM']['systemprompt'],
+            "bedrock_url": config['LLM']['bedrock_url'],
+            "aws_default_region": config['LLM']['aws_default_region'],
+            "bedrock_model": config['LLM']['bedrock_model'],
         },
         "VISION": {
             "enabled": config.getboolean('VISION', 'enabled'),
