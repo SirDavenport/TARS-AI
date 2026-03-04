@@ -177,7 +177,7 @@ def _prepare_request_data(llm_backend, prompt):
                 {"cachePoint": {"type":"default"}}
             ],
             "messages": [
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": [{"text": prompt}]}
             ],
             "inferenceConfig": {"maxTokens": CONFIG['LLM']['max_tokens'], "temperature": CONFIG['LLM']['temperature']}
         }
