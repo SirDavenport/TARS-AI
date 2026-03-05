@@ -3366,18 +3366,15 @@ function startCamera() {
 }
 
 function stopCamera() {
+  // Reset UI immediately, don't wait for server response
+  setCameraUI(false);
+  
   const feed = document.getElementById('cam-feed');
   feed.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
   feed.src = '';
-  fetch('/camera/stop', { method: 'POST' })
-    .then(r => r.json())
-    .then(data => {
-      console.log(data)
-      setCameraUI(false);
-    })
-    .catch(() => {
-      setCameraUI(false);  // reset UI even if fetch fails
-    });
+  
+  // Fire and forget
+  fetch('/camera/stop', { method: 'POST' }).catch(() => {});
 }
 
 // Auto-switch to camera tab if TARS triggers open_camera via LLM
