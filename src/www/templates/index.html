@@ -3366,11 +3366,18 @@ function startCamera() {
 }
 
 function stopCamera() {
-  // Set src to empty gif first to force-close the MJPEG connection in the browser
   const feed = document.getElementById('cam-feed');
   feed.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
   feed.src = '';
-  fetch('/camera/stop', { method: 'POST' }).finally(() => setCameraUI(false));
+  fetch('/camera/stop', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      console.log(data)
+      setCameraUI(false);
+    })
+    .catch(() => {
+      setCameraUI(false);  // reset UI even if fetch fails
+    });
 }
 
 // Auto-switch to camera tab if TARS triggers open_camera via LLM
