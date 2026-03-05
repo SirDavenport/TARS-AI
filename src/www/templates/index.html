@@ -2337,7 +2337,8 @@ document.getElementById('removeImageButton').addEventListener('click', function 
 });
 
 
-var socket = io.connect('http://' + document.domain + ':' + location.port);
+// var socket = io.connect('http://' + document.domain + ':' + location.port);
+var socket = io.connect(window.location.origin);
 
     socket.on('bot_message', function(data) {
         //console.log('Received botmessage:', data.message);
@@ -3375,6 +3376,8 @@ function stopCamera() {
 // Auto-switch to camera tab if TARS triggers open_camera via LLM
 setInterval(() => {
   if (cameraActive) return;
+  const camPane = document.getElementById('camera');
+  if (!camPane || !camPane.classList.contains('active')) return;
   fetch('/camera/status')
     .then(r => r.json())
     .then(data => {
