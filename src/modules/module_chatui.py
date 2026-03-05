@@ -58,12 +58,10 @@ from modules.module_llm import detect_emotion
 from modules.module_messageQue import queue_message
 from modules.module_servoctl import *
 from modules.module_movement_registry import get_names, get_names_by_type, LEGS_ONLY, HAS_ARMS, MOVEMENTS
-from modules.module_vision import initialize_camera, CAMERA
+from modules.module_vision import initialize_camera
 try:
-    from UI.module_ui_camera import CameraModule
     import cv2
     import numpy as np
-    _cam_instance = None
     _cam_active = False
 
 
@@ -544,6 +542,9 @@ def camera_start():
         return jsonify({"error": "Camera module not available"}), 503
     try:
         initialize_camera()
+        from modules.module_vision import CAMERA as cam
+        if cam is None:
+            return jsonify({"error": "Camera failed to initialize"}), 503
         _cam_active = True
         return jsonify({"camera_active": True})
     except Exception as e:
@@ -561,17 +562,18 @@ def camera_status():
 
 @flask_app.route('/camera/feed')
 def camera_feed():
+    from modules.module_vision import CAMERA as cam
     if not _cam_active or not CAMERA_AVAILABLE:
         return Response("Camera not active", status=503)
 
     def generate():
         while _cam_active:
             # Wait for first frame
-            if not CAMERA.first_frame_captured:
+            if not cam.first_frame_captured:
                 time.sleep(0.05)
                 continue
 
-            pygame_surface = CAMERA.get_frame()
+            pygame_surface = cam.get_frame()
             if pygame_surface is None:
                 time.sleep(0.05)
                 continue
