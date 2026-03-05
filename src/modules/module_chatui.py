@@ -58,6 +58,7 @@ from modules.module_llm import detect_emotion
 from modules.module_messageQue import queue_message
 from modules.module_servoctl import *
 from modules.module_movement_registry import get_names, get_names_by_type, LEGS_ONLY, HAS_ARMS, MOVEMENTS
+from modules.module_vision import initialize_camera, CAMERA
 try:
     from UI.module_ui_camera import CameraModule
     import cv2
@@ -65,11 +66,6 @@ try:
     _cam_instance = None
     _cam_active = False
 
-    def _get_camera():
-        global _cam_instance
-        if _cam_instance is None:
-            _cam_instance = CameraModule(width=640, height=480)
-        return _cam_instance
 
     CAMERA_AVAILABLE = True
 except ImportError:
@@ -547,7 +543,7 @@ def camera_start():
     if not CAMERA_AVAILABLE:
         return jsonify({"error": "Camera module not available"}), 503
     try:
-        _get_camera()  # initializes if not already running
+        initialize_camera()
         _cam_active = True
         return jsonify({"camera_active": True})
     except Exception as e:
@@ -569,14 +565,13 @@ def camera_feed():
         return Response("Camera not active", status=503)
 
     def generate():
-        cam = _get_camera()
         while _cam_active:
             # Wait for first frame
-            if not cam.first_frame_captured:
+            if not CAMERA.first_frame_captured:
                 time.sleep(0.05)
                 continue
 
-            pygame_surface = cam.get_frame()
+            pygame_surface = CAMERA.get_frame()
             if pygame_surface is None:
                 time.sleep(0.05)
                 continue
