@@ -1288,6 +1288,11 @@
         <i class="bi bi-gear-fill"></i>
       </button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link custom-tab" id="camera-tab" data-bs-toggle="tab" data-bs-target="#camera" type="button" role="tab" aria-label="Camera">
+        <i class="bi bi-camera-video-fill"></i>
+      </button>
+    </li>
     <li class="nav-item ms-auto" role="presentation">
       <button class="nav-link custom-tab" id="fullscreen-toggle" type="button" aria-label="Toggle Fullscreen" onclick="toggleFullscreen()">
         <i class="bi bi-fullscreen" id="fullscreen-icon"></i>
@@ -1568,11 +1573,138 @@
       </div>
     </div>
 
+    <!-- CAMERA TAB -->
+    <div class="tab-pane fade p-0" id="camera" role="tabpanel">
+      <div style="
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+        font-family: 'Press Start 2P', cursive;
+      ">
+        <!-- Camera header -->
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          border-bottom: 2px solid rgba(13,110,253,0.3);
+          background: rgba(13,17,23,0.95);
+          flex-shrink: 0;
+        ">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i class="bi bi-camera-video-fill" style="color:#0d6efd; font-size:16px;"></i>
+            <span style="color:#f8f9fa; font-size:10px; letter-spacing:1px;">LIVE CAMERA</span>
+            <span id="cam-live-badge" style="
+              display: none;
+              background: rgba(220,53,69,0.2);
+              border: 1px solid rgba(220,53,69,0.5);
+              color: #dc3545;
+              font-size: 8px;
+              padding: 2px 8px;
+              border-radius: 20px;
+              animation: camPulse 1.5s infinite;
+            ">● LIVE</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button onclick="startCamera()" id="cam-start-btn" style="
+              background: linear-gradient(135deg, #0d6efd, #0056b3);
+              border: none; border-radius: 6px;
+              color: white; font-size: 9px; padding: 8px 14px;
+              cursor: pointer; font-family: 'Press Start 2P', cursive;
+              transition: all 0.2s;
+            ">START</button>
+            <button onclick="stopCamera()" id="cam-stop-btn" style="
+              background: linear-gradient(135deg, #343a40, #212529);
+              border: 1px solid rgba(108,117,125,0.3);
+              border-radius: 6px; color: #6c757d;
+              font-size: 9px; padding: 8px 14px;
+              cursor: pointer; font-family: 'Press Start 2P', cursive;
+              transition: all 0.2s;
+            ">STOP</button>
+          </div>
+        </div>
+
+        <!-- Camera viewport -->
+        <div style="
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          overflow: hidden;
+          background: #000;
+        ">
+          <!-- Offline placeholder -->
+          <div id="cam-offline" style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            color: rgba(13,110,253,0.4);
+          ">
+            <i class="bi bi-camera-video-off" style="font-size: 48px;"></i>
+            <span style="font-size: 9px; color: #495057; letter-spacing: 1px;">CAMERA OFFLINE</span>
+            <span style="font-size: 7px; color: #343a40; text-align:center; line-height:1.8;">
+              PRESS START OR ASK<br>TARS TO OPEN CAMERA
+            </span>
+          </div>
+
+          <!-- Live feed -->
+          <img id="cam-feed" src="" alt="Camera feed" style="
+            display: none;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          ">
+
+          <!-- Corner scan lines effect when live -->
+          <div id="cam-scanlines" style="
+            display: none;
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 2px,
+              rgba(0,0,0,0.08) 2px,
+              rgba(0,0,0,0.08) 4px
+            );
+            pointer-events: none;
+          "></div>
+
+          <!-- Corner brackets when live -->
+          <div id="cam-brackets" style="display:none; position:absolute; inset:0; pointer-events:none;">
+            <div style="position:absolute; top:12px; left:12px; width:24px; height:24px; border-top:2px solid #0d6efd; border-left:2px solid #0d6efd;"></div>
+            <div style="position:absolute; top:12px; right:12px; width:24px; height:24px; border-top:2px solid #0d6efd; border-right:2px solid #0d6efd;"></div>
+            <div style="position:absolute; bottom:12px; left:12px; width:24px; height:24px; border-bottom:2px solid #0d6efd; border-left:2px solid #0d6efd;"></div>
+            <div style="position:absolute; bottom:12px; right:12px; width:24px; height:24px; border-bottom:2px solid #0d6efd; border-right:2px solid #0d6efd;"></div>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div style="
+          padding: 8px 16px;
+          border-top: 1px solid rgba(13,110,253,0.2);
+          background: rgba(13,17,23,0.95);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+        ">
+          <div id="cam-status-dot" style="width:8px; height:8px; border-radius:50%; background:#343a40;"></div>
+          <span id="cam-status-text" style="font-size:8px; color:#495057; letter-spacing:1px;">STANDBY</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-
-
-<script>
+  <style>
+    @keyframes camPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
 // Declare a global variable to store the base URL
 let talkingheadBaseUrl = '';
 
@@ -3224,7 +3356,100 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// Fullscreen toggle function - outside DOMContentLoaded so it's globally accessible
+// ── CAMERA ────────────────────────────────────────────────────────────────────
+let cameraActive = false;
+
+function setCameraUI(active) {
+  cameraActive = active;
+  const feed = document.getElementById('cam-feed');
+  const offline = document.getElementById('cam-offline');
+  const badge = document.getElementById('cam-live-badge');
+  const scanlines = document.getElementById('cam-scanlines');
+  const brackets = document.getElementById('cam-brackets');
+  const dot = document.getElementById('cam-status-dot');
+  const statusText = document.getElementById('cam-status-text');
+  const startBtn = document.getElementById('cam-start-btn');
+  const stopBtn = document.getElementById('cam-stop-btn');
+
+  if (active) {
+    feed.style.display = 'block';
+    offline.style.display = 'none';
+    badge.style.display = 'inline-block';
+    scanlines.style.display = 'block';
+    brackets.style.display = 'block';
+    dot.style.background = '#dc3545';
+    statusText.textContent = 'STREAMING';
+    statusText.style.color = '#dc3545';
+    startBtn.style.opacity = '0.4';
+    stopBtn.style.background = 'linear-gradient(135deg, #dc3545, #a71d2a)';
+    stopBtn.style.borderColor = '#dc3545';
+    stopBtn.style.color = 'white';
+  } else {
+    feed.src = '';
+    feed.style.display = 'none';
+    offline.style.display = 'flex';
+    badge.style.display = 'none';
+    scanlines.style.display = 'none';
+    brackets.style.display = 'none';
+    dot.style.background = '#343a40';
+    statusText.textContent = 'STANDBY';
+    statusText.style.color = '#495057';
+    startBtn.style.opacity = '1';
+    stopBtn.style.background = 'linear-gradient(135deg, #343a40, #212529)';
+    stopBtn.style.borderColor = 'rgba(108,117,125,0.3)';
+    stopBtn.style.color = '#6c757d';
+  }
+}
+
+function startCamera() {
+  const statusText = document.getElementById('cam-status-text');
+  const dot = document.getElementById('cam-status-dot');
+  statusText.textContent = 'CONNECTING...';
+  dot.style.background = '#ffc107';
+
+  fetch('/camera/start', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.camera_active) {
+        document.getElementById('cam-feed').src = '/camera/feed?' + Date.now();
+        setCameraUI(true);
+      } else {
+        statusText.textContent = 'ERROR';
+        dot.style.background = '#dc3545';
+      }
+    })
+    .catch(() => {
+      statusText.textContent = 'ERROR';
+      dot.style.background = '#dc3545';
+    });
+}
+
+function stopCamera() {
+  fetch('/camera/stop', { method: 'POST' })
+    .then(() => setCameraUI(false))
+    .catch(() => setCameraUI(false));
+}
+
+// Poll for camera status — auto-opens feed if TARS triggers open_camera via LLM
+setInterval(() => {
+  if (cameraActive) return;
+  fetch('/camera/status')
+    .then(r => r.json())
+    .then(data => {
+      if (data.camera_active && !cameraActive) {
+        // Switch to camera tab and show feed
+        const cameraTabBtn = document.getElementById('camera-tab');
+        if (cameraTabBtn) {
+          cameraTabBtn.click();
+        }
+        document.getElementById('cam-feed').src = '/camera/feed?' + Date.now();
+        setCameraUI(true);
+      }
+    })
+    .catch(() => {});
+}, 3000);
+// ─────────────────────────────────────────────────────────────────────────────
+
 function toggleFullscreen() {
     const icon = document.getElementById('fullscreen-icon');
     

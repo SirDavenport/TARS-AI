@@ -30,6 +30,15 @@ from PIL import Image
 import logging
 import json
 import asyncio
+try:
+    from picamera2 import Picamera2
+    PICAMERA_AVAILABLE = True
+except ImportError:
+    PICAMERA_AVAILABLE = False
+
+pi_camera = None
+pi_camera_lock = threading.Lock()
+pi_camera_active = False
 
 from flask import (
     Flask,
@@ -524,6 +533,50 @@ def get_next_audio_chunk():
         #queue_message(f"Chunk {current_chunk_index} not available yet.")
         return Response(status=204)  # No content available yet
 
+@flask_app.route('/camera/start', methods=['POST'])
+def camera_start():
+    global pi_camera, pi_camera_active
+    if not PICAMERA_AVAILABLE:
+        return jsonify({"error": "picamera2 not installed"}), 503
+    with pi_camera_lock:
+        if pi_camera is None:
+            pi_camera = Picamera2()
+            pi_camera.configure(pi_camera.create_video_configuration(main={"size": (640, 480)}))
+            pi_camera.start()
+            pi_camera_active = True
+    return jsonify({"camera_active": True})
+
+@flask_app.route('/camera/stop', methods=['POST'])
+def camera_stop():
+    global pi_camera, pi_camera_active
+    with pi_camera_lock:
+        if pi_camera is not None:
+            pi_camera.stop()
+            pi_camera.close()
+            pi_camera = None
+            pi_camera_active = False
+    return jsonify({"camera_active": False})
+
+@flask_app.route('/camera/feed')
+def camera_feed():
+    if not pi_camera_active or pi_camera is None:
+        return Response("Camera not active", status=503)
+    def generate():
+        while pi_camera_active and pi_camera is not None:
+            with pi_camera_lock:
+                if pi_camera is None:
+                    break
+                buf = io.BytesIO()
+                pi_camera.capture_file(buf, format='jpeg')
+                frame = buf.getvalue()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            time.sleep(0.05)
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@flask_app.route('/camera/status')
+def camera_status():
+    return jsonify({"camera_active": pi_camera_active})
 # Add these routes to your Flask application
 
 @flask_app.route('/robot_move', methods=['POST'])
