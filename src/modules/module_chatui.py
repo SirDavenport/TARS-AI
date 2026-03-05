@@ -30,15 +30,6 @@ from PIL import Image
 import logging
 import json
 import asyncio
-try:
-    from picamera2 import Picamera2
-    PICAMERA_AVAILABLE = True
-except ImportError:
-    PICAMERA_AVAILABLE = False
-
-pi_camera = None
-pi_camera_lock = threading.Lock()
-pi_camera_active = False
 
 from flask import (
     Flask,
@@ -67,6 +58,23 @@ from modules.module_llm import detect_emotion
 from modules.module_messageQue import queue_message
 from modules.module_servoctl import *
 from modules.module_movement_registry import get_names, get_names_by_type, LEGS_ONLY, HAS_ARMS, MOVEMENTS
+try:
+    from UI.module_ui_camera import CameraModule
+    import cv2
+    import numpy as np
+    _cam_instance = None
+    _cam_active = False
+
+    def _get_camera():
+        global _cam_instance
+        if _cam_instance is None:
+            _cam_instance = CameraModule(width=640, height=480)
+        return _cam_instance
+
+    CAMERA_AVAILABLE = True
+except ImportError:
+    CAMERA_AVAILABLE = False
+    queue_message("ChatUI: Camera module not available")
 
 # Vision is optional — only available if enabled and dependencies are installed
 try:
@@ -535,48 +543,56 @@ def get_next_audio_chunk():
 
 @flask_app.route('/camera/start', methods=['POST'])
 def camera_start():
-    global pi_camera, pi_camera_active
-    if not PICAMERA_AVAILABLE:
-        return jsonify({"error": "picamera2 not installed"}), 503
-    with pi_camera_lock:
-        if pi_camera is None:
-            pi_camera = Picamera2()
-            pi_camera.configure(pi_camera.create_video_configuration(main={"size": (640, 480)}))
-            pi_camera.start()
-            pi_camera_active = True
-    return jsonify({"camera_active": True})
+    global _cam_active
+    if not CAMERA_AVAILABLE:
+        return jsonify({"error": "Camera module not available"}), 503
+    try:
+        _get_camera()  # initializes if not already running
+        _cam_active = True
+        return jsonify({"camera_active": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @flask_app.route('/camera/stop', methods=['POST'])
 def camera_stop():
-    global pi_camera, pi_camera_active
-    with pi_camera_lock:
-        if pi_camera is not None:
-            pi_camera.stop()
-            pi_camera.close()
-            pi_camera = None
-            pi_camera_active = False
+    global _cam_active
+    _cam_active = False
     return jsonify({"camera_active": False})
-
-@flask_app.route('/camera/feed')
-def camera_feed():
-    if not pi_camera_active or pi_camera is None:
-        return Response("Camera not active", status=503)
-    def generate():
-        while pi_camera_active and pi_camera is not None:
-            with pi_camera_lock:
-                if pi_camera is None:
-                    break
-                buf = io.BytesIO()
-                pi_camera.capture_file(buf, format='jpeg')
-                frame = buf.getvalue()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            time.sleep(0.05)
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @flask_app.route('/camera/status')
 def camera_status():
-    return jsonify({"camera_active": pi_camera_active})
+    return jsonify({"camera_active": _cam_active})
+
+@flask_app.route('/camera/feed')
+def camera_feed():
+    if not _cam_active or not CAMERA_AVAILABLE:
+        return Response("Camera not active", status=503)
+
+    def generate():
+        cam = _get_camera()
+        while _cam_active:
+            # Wait for first frame
+            if not cam.first_frame_captured:
+                time.sleep(0.05)
+                continue
+
+            pygame_surface = cam.get_frame()
+            if pygame_surface is None:
+                time.sleep(0.05)
+                continue
+
+            # Convert pygame surface → numpy → JPEG bytes
+            import pygame
+            frame_array = pygame.surfarray.array3d(pygame_surface)
+            frame_array = np.rot90(frame_array, k=-1)  # pygame is column-major
+            frame_bgr = cv2.cvtColor(frame_array, cv2.COLOR_RGB2BGR)
+            _, jpeg = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
+            time.sleep(0.05)  # ~20fps
+
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 # Add these routes to your Flask application
 
 @flask_app.route('/robot_move', methods=['POST'])
