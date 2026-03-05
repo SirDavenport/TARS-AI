@@ -218,7 +218,6 @@ def llm_process(user_input, bot_response):
     global memory_manager
     if isinstance(bot_response, str):
         try:
-
             bot_response = bot_response.strip()
 
             bot_response = re.sub(r'^```json\s*', '', bot_response)
@@ -236,13 +235,14 @@ def llm_process(user_input, bot_response):
 
             while bot_response.endswith('}}') and bot_response.count('{') < bot_response.count('}'):
                 bot_response = bot_response[:-1]
-
             bot_response = json.loads(bot_response)
 
         except json.JSONDecodeError as e:
             queue_message(f"ERROR: JSON parsing failed: {e}")
             queue_message(f"Raw response: {bot_response}")
-            return "[Error: Invalid JSON from LLM. Check logs for details.]"
+            bot_response = {
+                "reply": bot_response
+            }
 
     if isinstance(bot_response, dict) and len(bot_response.keys()) == 1:
         sole_value = list(bot_response.values())[0]
