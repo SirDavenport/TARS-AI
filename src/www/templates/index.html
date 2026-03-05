@@ -3366,15 +3366,34 @@ function startCamera() {
 }
 
 function stopCamera() {
-  // Reset UI immediately, don't wait for server response
-  setCameraUI(false);
-  
-  const feed = document.getElementById('cam-feed');
-  feed.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-  feed.src = '';
-  
-  // Fire and forget
-  fetch('/camera/stop', { method: 'POST' }).catch(() => {});
+  // Show shutting down state immediately
+  document.getElementById('cam-feed').src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+  document.getElementById('cam-feed').src = '';
+  document.getElementById('cam-feed').style.display = 'none';
+  document.getElementById('cam-offline').style.display = 'flex';
+  document.getElementById('cam-offline').innerHTML = `
+    <i class="bi bi-camera-video-off" style="font-size:48px;"></i>
+    <span style="font-size:9px;color:#ffc107;letter-spacing:1px;">SHUTTING DOWN...</span>
+  `;
+  document.getElementById('cam-live-badge').style.display = 'none';
+  document.getElementById('cam-status-text').textContent = 'SHUTTING DOWN';
+  document.getElementById('cam-status-text').style.color = '#ffc107';
+  document.getElementById('cam-status-dot').style.background = '#ffc107';
+  document.getElementById('cam-start-btn').disabled = true;
+  document.getElementById('cam-start-btn').style.opacity = '0.4';
+
+  fetch('/camera/stop', { method: 'POST' })
+    .finally(() => {
+      setCameraUI(false);
+      // Restore offline placeholder text
+      document.getElementById('cam-offline').innerHTML = `
+        <i class="bi bi-camera-video-off" style="font-size:48px;"></i>
+        <span style="font-size:9px;color:#495057;letter-spacing:1px;">CAMERA OFFLINE</span>
+        <span style="font-size:7px;color:#343a40;text-align:center;line-height:1.8;">PRESS START OR ASK<br>TARS TO OPEN CAMERA</span>
+      `;
+      document.getElementById('cam-start-btn').disabled = false;
+      document.getElementById('cam-start-btn').style.opacity = '1';
+    });
 }
 
 // Auto-switch to camera tab if TARS triggers open_camera via LLM
