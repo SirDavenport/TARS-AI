@@ -385,12 +385,8 @@ def _summarize_search_results(search_results, user_question):
             }
         elif llm_backend == "bedrock":
             data = {
-                "system": [
-                    {"text": CONFIG['LLM']['systemprompt']},
-                    {"cachePoint": {"type":"default"}}
-                ],
                 "messages": [
-                    {"role": "user", "content": summary_prompt}
+                    {"role": "user", "content": [{"text": summary_prompt}]}
                 ],
                 "inferenceConfig": {"maxTokens": CONFIG['LLM']['max_tokens'], "temperature": CONFIG['LLM']['temperature']}
             }
